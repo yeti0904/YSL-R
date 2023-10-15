@@ -6,12 +6,18 @@ import yslr.environment;
 
 int main(string[] args) {
 	string inFile;
+	bool   importEditor = false;
 
 	auto env = new Environment();
 
 	for (size_t i = 1; i < args.length; ++ i) {
 		if (args[i][0] == '-') {
 			switch (args[i]) {
+				case "-e":
+				case "--edit": {
+					importEditor = true;
+					break;
+				}
 				default: {
 					stderr.writefln("Unknown flag %s", args[i]);
 					return 1;
@@ -21,6 +27,11 @@ int main(string[] args) {
 		else {
 			inFile = args[i];
 		}
+	}
+
+	if (importEditor) {
+		env.Import("editor", true);
+		writeln("Imported editor");
 	}
 
 	if (inFile.empty()) {

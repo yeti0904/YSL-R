@@ -29,13 +29,14 @@ static Variable Load(string[] args, Environment env) {
 	}
 	catch (ErrnoException e) {
 		stderr.writefln("Error: load: Failed to load file: %s", e.msg);
+		return [];
 	}
 
 	string line;
 	int    num = 10;
 	
 	while ((line = file.readln()) !is null) {
-		env.code[num]  = line;
+		env.code[num]  = line[0 .. $ - 1];
 		num           += 10;
 	}
 

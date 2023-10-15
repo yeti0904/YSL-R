@@ -123,6 +123,12 @@ class Environment {
 		}
 	}
 
+	Variable PopReturn() {
+		Variable ret = returnStack[$ - 1];
+		returnStack  = returnStack[0 .. $ - 1];
+		return ret;
+	}
+
 	bool LocalExists(string name) {
 		if (locals.empty()) {
 			return false;
@@ -199,6 +205,10 @@ class Environment {
 					string labelName = part[1 .. $];
 
 					foreach (entry ; code.entries) {
+						if (entry.value.value.length == 0) {
+							continue;
+						}
+						
 						if (entry.value.value[$ - 1] == ':') {
 							string thisLabel = entry.value.value[0 .. $ - 1];
 
@@ -223,11 +233,36 @@ class Environment {
 		return ret;
 	}
 
+	bool ArgumentsCorrect(ArgType[] args, string[] parts) {
+		if (args.length != parts.length) {
+			return false;
+		}
+
+		foreach (i, ref arg ; args) {
+			switch (arg) {
+				case ArgType.Numerical: {
+					if (!parts[i].isNumeric()) {
+						return false;
+					}
+					break;
+				}
+				case ArgType.Other: break;
+				default:            assert(0);
+			}
+		}
+
+		return true;
+	}
+
 	void Interpret(int line, string str) {
 		increment = true;
 	
 		// string[] parts = SubstituteParts(line, str.Split(line));
 		string[] parts = str.Split(line);
+
+		if (parts.length == 0) {
+			return;
+		}
 
 		if (parts[0].isNumeric()) {
 			// WriteCode(parse!int(parts[0]), parts[1 .. $].join(" "));
@@ -247,8 +282,22 @@ class Environment {
 			auto func = functions[parts[0]];
 
 			if (func.builtIn) {
-				// TODO: safe arg checking
-				func.func(parts[1 .. $], this);
+				if (
+					func.strictArgs &&
+					!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
+				) {
+					stderr.writefln(
+						"Error: Line %d: Invalid parameters for function %s", line,
+						parts[0]
+					);
+					throw new YSLError();
+				}
+				
+				auto ret     = func.func(parts[1 .. $], this);
+
+				if (ret.length > 0) {
+					returnStack ~= ret;
+				}
 			}
 			else {
 				assert(0); // TODO

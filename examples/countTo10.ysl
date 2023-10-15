@@ -1,0 +1,9 @@
+import_std
+
+var i = 0
+loop:
+	println $i
+	var i += 1
+	cmp $i 10
+	not
+	goto_if *loop
