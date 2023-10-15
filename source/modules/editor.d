@@ -43,10 +43,20 @@ static Variable Load(string[] args, Environment env) {
 	return [];
 }
 
+static Variable Save(string[] args, Environment env) {
+	auto file = File(args[0], "w");
+
+	foreach (key, ref value ; env.code) {
+		file.writeln(value);
+	}
+	return [];
+}
+
 Module Module_Editor() {
 	Module ret;
 	ret["list"]  = Function.CreateBuiltIn(false, [], &List);
 	ret["clear"] = Function.CreateBuiltIn(false, [], &Clear);
-	ret["load"]  = Function.CreateBuiltIn(false, [], &Load);
+	ret["load"]  = Function.CreateBuiltIn(true, [ArgType.Other], &Load);
+	ret["save"]  = Function.CreateBuiltIn(true, [ArgType.Other], &Save);
 	return ret;
 }

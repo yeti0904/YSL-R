@@ -4,7 +4,7 @@
 	],
 	"copyright": "Copyright © 2023, yeti0904",
 	"dependencies": {
-		"ydlib": "~>1.3.5"
+		"ydlib": "~>1.3.10"
 	},
 	"description": "YSL-R",
 	"license": "GPL-3.0-or-later",
