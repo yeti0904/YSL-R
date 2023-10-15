@@ -1,0 +1,12 @@
+{
+	"authors": [
+		"yeti0904"
+	],
+	"copyright": "Copyright © 2023, yeti0904",
+	"dependencies": {
+		"ydlib": "~>1.3.5"
+	},
+	"description": "YSL-R",
+	"license": "GPL-3.0-or-later",
+	"name": "yslr"
+}

@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/yslr
+yslr.so
+yslr.dylib
+yslr.dll
+yslr.a
+yslr.lib
+yslr-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

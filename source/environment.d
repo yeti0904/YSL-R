@@ -1,0 +1,275 @@
+module yslr.environment;
+
+import std.conv;
+import std.stdio;
+import std.string;
+import std.algorithm;
+import core.stdc.stdlib;
+import ydlib.list;
+import ydlib.sortedMap;
+import yslr.util;
+import yslr.split;
+
+alias Variable = int[];
+alias Scope    = Variable[string];
+alias Module   = Function[string];
+alias BuiltIn  = Variable function(string[], Environment);
+
+enum ArgType {
+	Numerical,
+	Other
+}
+
+struct Function {
+	bool      strictArgs;
+	ArgType[] requiredArgs;           
+	bool      builtIn;
+	BuiltIn   func;
+	int       label;
+
+	static Function CreateBuiltIn(
+		bool strictArgs, ArgType[] requiredArgs, BuiltIn func
+	) {
+		return Function(strictArgs, requiredArgs, true, func, -1);
+	}
+}
+
+// required functions
+Variable BuiltIn_Import(string[] args, Environment env) {
+	if (args.length < 1) {
+		stderr.writeln("Error: import: At least 1 argument required (module name)");
+		throw new YSLError();
+	}
+
+	if (!env.ModuleExists(args[0])) {
+		stderr.writefln("Error: import: No such module '%s'", args[0]);
+		throw new YSLError();
+	}
+
+	bool global = false;
+
+	if (args.length > 1) {
+		global = args[1] == "global";
+	}
+
+	env.Import(args[0], global);
+	return [];
+}
+
+Variable BuiltIn_Run(string[] args, Environment env) {
+	env.Run();
+	return [];
+}
+
+Variable BuiltIn_ImportSTD(string[] args, Environment env) {
+	env.Import("stdio", true);
+	return [];
+}
+
+class YSLError : Exception {
+	this(string file = __FILE__, size_t line = __LINE__) {
+		super("", file, line);
+	}
+}
+
+class Environment {
+	Scope                             globals;
+	Scope[]                           locals;
+	Variable[]                        returnStack;
+	int[]                             callStack;
+	string[]                          passStack;
+	Function[string]                  functions;
+	ListNode!(MapEntry!(int, string)) ip;
+	bool                              increment;
+	SortedMap!(int, string)           code;
+	Module[string]                    modules;
+
+	this() {
+		code = new SortedMap!(int, string);
+	
+		// add default functions
+		functions["import"]     = Function.CreateBuiltIn(false, [], &BuiltIn_Import);
+		functions["run"]        = Function.CreateBuiltIn(false, [], &BuiltIn_Run);
+		functions["import_std"] = Function.CreateBuiltIn(true, [], &BuiltIn_ImportSTD);
+
+		// add modules
+		import yslr.modules.core;
+		import yslr.modules.stdio;
+		import yslr.modules.editor;
+
+		modules["core"]   = Module_Core();
+		modules["stdio"]  = Module_Stdio();
+		modules["editor"] = Module_Editor();
+
+		Import("core", true);
+	}
+
+	bool ModuleExists(string name) {
+		return (name in modules) !is null;
+	}
+
+	void Import(string name, bool global) {
+		foreach (key, ref value ; modules[name]) {
+			string funcName;
+
+			if (global) {
+				funcName = key;
+			}
+			else {
+				funcName = format("%s.%s", name, key);
+			}
+
+			functions[funcName] = value;
+		}
+	}
+
+	bool LocalExists(string name) {
+		if (locals.empty()) {
+			return false;
+		}
+		
+		return (name in locals[$ - 1]) !is null;
+	}
+
+	int[]* GetLocal(string name) {
+		return &locals[$ - 1][name];
+	}
+
+	bool GlobalExists(string name) {
+		return (name in globals) !is null;
+	}
+
+	int[]* GetGlobal(string name) {
+		return &globals[name];
+	}
+
+	bool VariableExists(string name) {
+		return LocalExists(name) || GlobalExists(name);
+	}
+
+	int[]* GetVariable(string name) {
+		if (LocalExists(name)) {
+			return GetLocal(name);
+		}
+
+		return GetGlobal(name);
+	}
+
+	void CreateVariable(string name, int[] value) {
+		if (locals.length > 0) {
+			locals[$ - 1][name] = value;
+		}
+		else {
+			globals[name] = value;
+		}
+	}
+
+	string[] SubstituteParts(int line, string[] parts) {
+		string[] ret;
+
+		foreach (ref part ; parts) {
+			switch (part[0]) {
+				case '$': {
+					string varName = part[1 .. $];
+
+					if (!VariableExists(varName)) {
+						stderr.writefln(
+							"Error: line %d: Unknown variable %s", line, varName
+						);
+						throw new YSLError();
+					}
+
+					ret ~= text((*GetVariable(varName))[0]);
+					break;
+				}
+				case '!': {
+					string varName = part[1 .. $];
+
+					if (!VariableExists(varName)) {
+						stderr.writefln(
+							"Error: line %d: Unknown variable %s", line, varName
+						);
+						throw new YSLError();
+					}
+
+					ret ~= IntArrayToString(*GetVariable(varName));
+					break;
+				}
+				case '*': {
+					string labelName = part[1 .. $];
+
+					foreach (entry ; code.entries) {
+						if (entry.value.value[$ - 1] == ':') {
+							string thisLabel = entry.value.value[0 .. $ - 1];
+
+							if (thisLabel == labelName) {
+								ret ~= text(entry.value.key);
+								goto nextPart;
+							}
+						}
+					}
+
+					stderr.writefln(
+						"Error: line %d: Couldn't find label %s", line, labelName
+					);
+					throw new YSLError();
+				}
+				default: ret ~= part;
+			}
+
+			nextPart:
+		}
+
+		return ret;
+	}
+
+	void Interpret(int line, string str) {
+		increment = true;
+	
+		// string[] parts = SubstituteParts(line, str.Split(line));
+		string[] parts = str.Split(line);
+
+		if (parts[0].isNumeric()) {
+			// WriteCode(parse!int(parts[0]), parts[1 .. $].join(" "));
+			code[parse!int(parts[0])] = parts[1 .. $].join(" ");
+		}
+		else if (parts[0][$ - 1] == ':') {
+			return; // this is a label
+		}
+		else {
+			parts = SubstituteParts(line, parts);
+			
+			if (parts[0] !in functions) {
+				stderr.writefln("ERROR: Line %d: Unknown function %s", line, parts[0]);
+				throw new YSLError();
+			}
+			
+			auto func = functions[parts[0]];
+
+			if (func.builtIn) {
+				// TODO: safe arg checking
+				func.func(parts[1 .. $], this);
+			}
+			else {
+				assert(0); // TODO
+			}
+		}
+	}
+
+	void Run() {
+		if (code.entries.head is null) {
+			stderr.writeln("Nothing to run");
+			return;
+		}
+	
+		ip = code.entries.head;
+
+		while (ip !is null) {
+			Interpret(ip.value.key, ip.value.value);
+
+			if (increment) {		
+				ip = ip.next;
+			}
+		}
+	}
+}
