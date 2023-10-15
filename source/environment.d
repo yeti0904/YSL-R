@@ -26,6 +26,7 @@ struct Function {
 	bool      builtIn;
 	BuiltIn   func;
 	int       label;
+	string    from = "nowhere";
 
 	static Function CreateBuiltIn(
 		bool strictArgs, ArgType[] requiredArgs, BuiltIn func
@@ -93,10 +94,12 @@ class Environment {
 		functions["import_std"] = Function.CreateBuiltIn(true, [], &BuiltIn_ImportSTD);
 
 		// add modules
+		import yslr.modules.doc;
 		import yslr.modules.core;
 		import yslr.modules.stdio;
 		import yslr.modules.editor;
 
+		modules["doc"]    = Module_Doc();
 		modules["core"]   = Module_Core();
 		modules["stdio"]  = Module_Stdio();
 		modules["editor"] = Module_Editor();
@@ -109,8 +112,10 @@ class Environment {
 	}
 
 	void Import(string name, bool global) {
-		foreach (key, ref value ; modules[name]) {
+		foreach (key, value ; modules[name]) {
 			string funcName;
+
+			value.from = name;
 
 			if (global) {
 				funcName = key;
