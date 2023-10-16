@@ -252,6 +252,67 @@ static Variable GotoIf(string[] args, Environment env) {
 	return [];
 }
 
+static Variable Gosub(string[] args, Environment env) {
+	int line = parse!int(args[0]);
+
+	foreach (ref arg ; args[1 .. $]) {
+		if (arg.isNumeric()) {
+			env.passStack ~= [parse!int(arg)];
+		}
+		else {
+			env.passStack ~= StringToIntArray(arg);
+		}
+	}
+
+	foreach (entry ; env.code.entries) {
+		if (entry.value.key == line) {
+			env.callStack ~= env.ip.value.key;
+			env.ip         = entry;
+			env.increment  = false;
+			return [];
+		}
+	}
+
+	stderr.writefln("Error: gosub: Couldn't find line %d", line);
+	throw new YSLError();
+}
+
+static Variable GosubIf(string[] args, Environment env) {
+	if (env.returnStack.length == 0) {
+		stderr.writeln("Error: gosub_if: Return stack empty");
+		throw new YSLError();
+	}
+
+	if (env.PopReturn()[0] != 0) {
+		return Gosub(args, env);
+	}
+
+	return [];
+}
+
+static Variable Return(string[] args, Environment env) {
+	foreach (ref arg ; args) {
+		if (arg.isNumeric()) {
+			env.returnStack ~= [parse!int(arg)];
+		}
+		else {
+			env.returnStack ~= StringToIntArray(arg);
+		}
+	}
+
+	if (env.callStack.length == 0) {
+		stderr.writeln("Error: return: Nowhere to return to");
+		throw new YSLError();
+	}
+
+	if (!env.Jump(env.PopCall(), true)) {
+		stderr.writeln("Fatal error: return: Failed to return");
+		throw new YSLError();
+	}
+
+	return [];
+}
+
 static Variable Exit(string[] args, Environment env) {
 	exit(parse!int(args[0]));
 }
@@ -271,11 +332,14 @@ static Variable Not(string[] args, Environment env) {
 
 Module Module_Core() {
 	Module ret;
-	ret["var"]     = Function.CreateBuiltIn(false, [], &Var);
-	ret["goto"]    = Function.CreateBuiltIn(true, [ArgType.Numerical], &Goto);
-	ret["exit"]    = Function.CreateBuiltIn(true, [ArgType.Numerical], &Exit);
-	ret["cmp"]     = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Cmp);
-	ret["goto_if"] = Function.CreateBuiltIn(true, [ArgType.Numerical], &GotoIf);
-	ret["not"]     = Function.CreateBuiltIn(false, [], &Not);
+	ret["var"]      = Function.CreateBuiltIn(false, [], &Var);
+	ret["goto"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &Goto);
+	ret["goto_if"]  = Function.CreateBuiltIn(true, [ArgType.Numerical], &GotoIf);
+	ret["gosub"]    = Function.CreateBuiltIn(true, [ArgType.Numerical], &Gosub);
+	ret["gosub_if"] = Function.CreateBuiltIn(true, [ArgType.Numerical], &GosubIf);
+	ret["return"]   = Function.CreateBuiltIn(false, [], &Return);
+	ret["exit"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &Exit);
+	ret["cmp"]      = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Cmp);
+	ret["not"]      = Function.CreateBuiltIn(false, [], &Not);
 	return ret;
 }

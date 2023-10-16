@@ -14,6 +14,7 @@ alias Variable = int[];
 alias Scope    = Variable[string];
 alias Module   = Function[string];
 alias BuiltIn  = Variable function(string[], Environment);
+alias Label    = ListNode!(MapEntry!(int, string));
 
 enum ArgType {
 	Numerical,
@@ -74,16 +75,16 @@ class YSLError : Exception {
 }
 
 class Environment {
-	Scope                             globals;
-	Scope[]                           locals;
-	Variable[]                        returnStack;
-	int[]                             callStack;
-	string[]                          passStack;
-	Function[string]                  functions;
-	ListNode!(MapEntry!(int, string)) ip;
-	bool                              increment;
-	SortedMap!(int, string)           code;
-	Module[string]                    modules;
+	Scope                   globals;
+	Scope[]                 locals;
+	Variable[]              returnStack;
+	int[]                   callStack;
+	Variable[]              passStack;
+	Function[string]        functions;
+	Label                   ip;
+	bool                    increment;
+	SortedMap!(int, string) code;
+	Module[string]          modules;
 
 	this() {
 		code = new SortedMap!(int, string);
@@ -135,8 +136,14 @@ class Environment {
 	}
 
 	Variable PopPass() {
-		Variable ret = passStack[$ - 1].StringToIntArray();
+		Variable ret = passStack[$ - 1];
 		passStack    = passStack[0 .. $ - 1];
+		return ret;
+	}
+
+	int PopCall() {
+		int ret   = callStack[$ - 1];
+		callStack = callStack[0 .. $ - 1];
 		return ret;
 	}
 
@@ -179,6 +186,18 @@ class Environment {
 		else {
 			globals[name] = value;
 		}
+	}
+
+	bool Jump(int line, bool skip = false) {
+		foreach (entry ; code.entries) {
+			if (entry.value.key == line) {
+				ip        = entry;
+				increment = skip;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	string[] SubstituteParts(int line, string[] parts) {
@@ -277,7 +296,9 @@ class Environment {
 
 		if (parts[0].isNumeric()) {
 			// WriteCode(parse!int(parts[0]), parts[1 .. $].join(" "));
-			code[parse!int(parts[0])] = parts[1 .. $].join(" ");
+			string codeLine = str.strip().find(" ")[1 .. $];
+			
+			code[parse!int(parts[0])] = codeLine;
 		}
 		else if (parts[0][$ - 1] == ':') {
 			return; // this is a label
@@ -292,26 +313,41 @@ class Environment {
 			
 			auto func = functions[parts[0]];
 
-			if (func.builtIn) {
-				if (
-					func.strictArgs &&
-					!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
-				) {
-					stderr.writefln(
-						"Error: Line %d: Invalid parameters for function %s", line,
-						parts[0]
-					);
-					throw new YSLError();
-				}
-				
-				auto ret     = func.func(parts[1 .. $], this);
+			try {
+				if (func.builtIn) {
+					if (
+						func.strictArgs &&
+						!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
+					) {
+						stderr.writefln(
+							"Error: Line %d: Invalid parameters for function %s", line,
+							parts[0]
+						);
+						throw new YSLError();
+					}
+					
+					auto ret     = func.func(parts[1 .. $], this);
 
-				if (ret.length > 0) {
-					returnStack ~= ret;
+					if (ret.length > 0) {
+						returnStack ~= ret;
+					}
+				}
+				else {
+					assert(0); // TODO
 				}
 			}
-			else {
-				assert(0); // TODO
+			catch (YSLError) {
+				if (ip is null) {
+					return;
+				}
+				
+				stderr.writefln("Error from line %d", ip.value.key);
+				stderr.writeln("Backtrace");
+				foreach (i, ref call ; callStack) {
+					stderr.writefln(
+						"#%d: Line %d: %s", i, call, code[call]
+					);
+				}
 			}
 		}
 	}

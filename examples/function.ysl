@@ -1,0 +1,7 @@
+import_std
+goto *main
+sayHi:
+	println "hi!"
+	return
+main:
+	gosub *sayHi

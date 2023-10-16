@@ -51,7 +51,6 @@ int main(string[] args) {
 			try {
 				env.Interpret(-1, code);
 			}
-			catch (YSLError) {}
 			catch (Exception e) {
 				stderr.writefln("Exception from %s:%d: %s", e.file, e.line, e.msg);
 				stderr.writeln(e.info);
