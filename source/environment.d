@@ -134,6 +134,12 @@ class Environment {
 		return ret;
 	}
 
+	Variable PopPass() {
+		Variable ret = passStack[$ - 1].StringToIntArray();
+		passStack    = passStack[0 .. $ - 1];
+		return ret;
+	}
+
 	bool LocalExists(string name) {
 		if (locals.empty()) {
 			return false;
@@ -167,7 +173,7 @@ class Environment {
 	}
 
 	void CreateVariable(string name, int[] value) {
-		if (locals.length > 0) {
+		if (!GlobalExists(name) && (locals.length > 0)) {
 			locals[$ - 1][name] = value;
 		}
 		else {
