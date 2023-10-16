@@ -296,9 +296,15 @@ class Environment {
 
 		if (parts[0].isNumeric()) {
 			// WriteCode(parse!int(parts[0]), parts[1 .. $].join(" "));
-			string codeLine = str.strip().find(" ")[1 .. $];
-			
-			code[parse!int(parts[0])] = codeLine;
+			if (parts.length == 1) {
+				code[parse!int(parts[0])] = "";
+				// TODO: delete the line
+			}
+			else {
+				string codeLine = str.strip().find(" ")[1 .. $];
+				
+				code[parse!int(parts[0])] = codeLine;
+			}
 		}
 		else if (parts[0][$ - 1] == ':') {
 			return; // this is a label
