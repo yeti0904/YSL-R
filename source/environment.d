@@ -204,6 +204,10 @@ class Environment {
 		string[] ret;
 
 		foreach (ref part ; parts) {
+			if (part.empty()) {
+				continue;
+			}
+			
 			switch (part[0]) {
 				case '$': {
 					string varName = part[1 .. $];
