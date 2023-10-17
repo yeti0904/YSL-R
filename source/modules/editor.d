@@ -20,24 +20,12 @@ static Variable Clear(string[] args, Environment env) {
 }
 
 static Variable Load(string[] args, Environment env) {
-	env.code = new SortedMap!(int, string);
-
-	File file;
-
 	try {
-		file = File(args[0], "r");
+		env.LoadFile(args[0]);
 	}
 	catch (ErrnoException e) {
 		stderr.writefln("Error: load: Failed to load file: %s", e.msg);
-		return [];
-	}
-
-	string line;
-	int    num = 10;
-	
-	while ((line = file.readln()) !is null) {
-		env.code[num]  = line[0 .. $ - 1];
-		num           += 10;
+		throw new YSLError();
 	}
 
 	return [];

@@ -2,7 +2,17 @@ module yslr.app;
 
 import std.stdio;
 import std.range;
+import std.string;
+import std.exception;
 import yslr.environment;
+
+const string appHelp = "
+Usage: %s [FILE] [FLAGS]
+
+Flags:
+	-h / --help : Shows this info
+	-e / --edit : Loads editor module
+";
 
 int main(string[] args) {
 	string inFile;
@@ -13,6 +23,11 @@ int main(string[] args) {
 	for (size_t i = 1; i < args.length; ++ i) {
 		if (args[i][0] == '-') {
 			switch (args[i]) {
+				case "-h":
+				case "--help": {
+					writefln(appHelp.strip(), args[0]);
+					return 0;
+				}
 				case "-e":
 				case "--edit": {
 					importEditor = true;
@@ -59,7 +74,15 @@ int main(string[] args) {
 		}
 	}
 	else {
-		// TODO
+		try {
+			env.LoadFile(inFile);
+		}
+		catch (ErrnoException e) {
+			stderr.writefln("Failed to load file: %s", e.msg);
+			return 1;
+		}
+
+		env.Run();
 	}
 
 	return 0;

@@ -6,6 +6,7 @@ import yslr.environment;
 static Variable Doc(string[] args, Environment env) {
 	if (args.length == 0) {
 		stderr.writeln("Error: doc: 1 argument required (operation)");
+		throw new YSLError();
 	}
 
 	switch (args[0]) {

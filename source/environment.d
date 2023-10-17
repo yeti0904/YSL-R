@@ -65,6 +65,7 @@ Variable BuiltIn_Run(string[] args, Environment env) {
 
 Variable BuiltIn_ImportSTD(string[] args, Environment env) {
 	env.Import("stdio", true);
+	env.Import("stdfunc", true);
 	return [];
 }
 
@@ -96,14 +97,18 @@ class Environment {
 
 		// add modules
 		import yslr.modules.doc;
+		import yslr.modules.ysl;
 		import yslr.modules.core;
 		import yslr.modules.stdio;
 		import yslr.modules.editor;
+		import yslr.modules.stdfunc;
 
-		modules["doc"]    = Module_Doc();
-		modules["core"]   = Module_Core();
-		modules["stdio"]  = Module_Stdio();
-		modules["editor"] = Module_Editor();
+		modules["doc"]     = Module_Doc();
+		modules["ysl"]     = Module_Ysl();
+		modules["core"]    = Module_Core();
+		modules["stdio"]   = Module_Stdio();
+		modules["editor"]  = Module_Editor();
+		modules["stdfunc"] = Module_Stdfunc();
 
 		Import("core", true);
 	}
@@ -126,6 +131,20 @@ class Environment {
 			}
 
 			functions[funcName] = value;
+		}
+	}
+
+	void LoadFile(string path) {
+		code = new SortedMap!(int, string);
+
+		File file = File(path, "r");
+
+		string line;
+		int    num = 10;
+		
+		while ((line = file.readln()) !is null) {
+			code[num]  = line[0 .. $ - 1];
+			num       += 10;
 		}
 	}
 
@@ -336,14 +355,19 @@ class Environment {
 						throw new YSLError();
 					}
 					
-					auto ret     = func.func(parts[1 .. $], this);
+					auto ret = func.func(parts[1 .. $], this);
 
 					if (ret.length > 0) {
 						returnStack ~= ret;
 					}
 				}
 				else {
-					assert(0); // TODO
+					callStack ~= ip.value.key;
+
+					if (!Jump(func.label, false)) {
+						stderr.writefln("Error: Broken function %s", parts[0]);
+						throw new YSLError();
+					}
 				}
 			}
 			catch (YSLError) {
