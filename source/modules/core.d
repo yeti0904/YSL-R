@@ -97,8 +97,12 @@ static Variable Var(string[] args, Environment env) {
 				stderr.writeln("Error: var: from operator needs 3 arguments");
 				throw new YSLError();
 			}
-		
-			size_t index = args.length == 4? parse!size_t(args[3]) : 0;
+
+			size_t index;
+
+			if ((args[1] == "f") || (args[1] == "from")) {
+				index = args.length == 4? parse!size_t(args[3]) : 0;
+			}
 
 			if ((args[2] != "return") && !env.VariableExists(args[2])) {
 				stderr.writefln("Error: var: No such variable: '%s'", args[0]);
@@ -117,7 +121,7 @@ static Variable Var(string[] args, Environment env) {
 					value = env.PopReturn();
 				}
 				else {
-					value = [env.PopReturn()[0]];
+					value = [env.PopReturn()[index]];
 				}
 			}
 			else {
@@ -125,7 +129,7 @@ static Variable Var(string[] args, Environment env) {
 					value = *env.GetVariable(args[2]);
 				}
 				else {
-					value = [(*env.GetVariable(args[2]))[0]];
+					value = [(*env.GetVariable(args[2]))[index]];
 				}
 			}
 
