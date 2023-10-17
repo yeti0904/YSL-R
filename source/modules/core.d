@@ -5,6 +5,7 @@ import std.math;
 import std.stdio;
 import std.string;
 import std.algorithm;
+import core.thread;
 import core.stdc.stdlib;
 import yslr.util;
 import yslr.environment;
@@ -330,6 +331,41 @@ static Variable Not(string[] args, Environment env) {
 	return [env.PopReturn()[0] == 0? 1 : 0];
 }
 
+static Variable Size(string[] args, Environment env) {
+	string varName = args[0];
+
+	if (!env.VariableExists(varName)) {
+		stderr.writefln("Error: size: No such variable: %s", varName);
+		throw new YSLError();
+	}
+
+	auto var = env.GetVariable(varName);
+
+	return [cast(int) (*var).length];
+}
+
+static Variable Wait(string[] args, Environment env) {
+	int ms = parse!int(args[0]);
+
+	Thread.sleep(dur!("msecs")(ms));
+	return [];
+}
+
+static Variable SetSize(string[] args, Environment env) {
+	string varName = args[0];
+
+	if (!env.VariableExists(varName)) {
+		stderr.writefln("Error: size: No such variable: %s", varName);
+		throw new YSLError();
+	}
+
+	auto var = env.GetVariable(varName);
+
+	(*var).length = parse!size_t(args[1]);
+
+	return [];
+}
+
 Module Module_Core() {
 	Module ret;
 	ret["var"]      = Function.CreateBuiltIn(false, [], &Var);
@@ -341,5 +377,8 @@ Module Module_Core() {
 	ret["exit"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &Exit);
 	ret["cmp"]      = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Cmp);
 	ret["not"]      = Function.CreateBuiltIn(false, [], &Not);
+	ret["size"]     = Function.CreateBuiltIn(true, [ArgType.Other], &Size);
+	ret["wait"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &Wait);
+	ret["set_size"] = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Numerical], &SetSize);
 	return ret;
 }
