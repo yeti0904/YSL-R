@@ -315,7 +315,17 @@ static Variable Return(string[] args, Environment env) {
 }
 
 static Variable Exit(string[] args, Environment env) {
-	exit(parse!int(args[0]));
+	if (args.length == 0) {
+		exit(0);
+	}
+	else {
+		if (!args[0].isNumeric()) {
+			stderr.writeln("Error: exit: Must have numerical exit code");
+			throw new YSLError();
+		}
+	
+		exit(parse!int(args[0]));
+	}
 }
 
 static Variable Cmp(string[] args, Environment env) {
@@ -374,7 +384,7 @@ Module Module_Core() {
 	ret["gosub"]    = Function.CreateBuiltIn(true, [ArgType.Numerical], &Gosub);
 	ret["gosub_if"] = Function.CreateBuiltIn(true, [ArgType.Numerical], &GosubIf);
 	ret["return"]   = Function.CreateBuiltIn(false, [], &Return);
-	ret["exit"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &Exit);
+	ret["exit"]     = Function.CreateBuiltIn(false, [], &Exit);
 	ret["cmp"]      = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Cmp);
 	ret["not"]      = Function.CreateBuiltIn(false, [], &Not);
 	ret["size"]     = Function.CreateBuiltIn(true, [ArgType.Other], &Size);
