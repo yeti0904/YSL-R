@@ -308,6 +308,10 @@ class Environment {
 	}
 
 	void Interpret(int line, string str) {
+		if (str.strip()[0] == '#') {
+			return;
+		}
+	
 		increment = true;
 	
 		// string[] parts = SubstituteParts(line, str.Split(line));
