@@ -66,6 +66,7 @@ Variable BuiltIn_Run(string[] args, Environment env) {
 Variable BuiltIn_ImportSTD(string[] args, Environment env) {
 	env.Import("stdio", true);
 	env.Import("stdfunc", true);
+	env.Import("stdstring", true);
 	return [];
 }
 
@@ -102,13 +103,15 @@ class Environment {
 		import yslr.modules.stdio;
 		import yslr.modules.editor;
 		import yslr.modules.stdfunc;
+		import yslr.modules.stdstring;
 
-		modules["doc"]     = Module_Doc();
-		modules["ysl"]     = Module_Ysl();
-		modules["core"]    = Module_Core();
-		modules["stdio"]   = Module_Stdio();
-		modules["editor"]  = Module_Editor();
-		modules["stdfunc"] = Module_Stdfunc();
+		modules["doc"]       = Module_Doc();
+		modules["ysl"]       = Module_Ysl();
+		modules["core"]      = Module_Core();
+		modules["stdio"]     = Module_Stdio();
+		modules["editor"]    = Module_Editor();
+		modules["stdfunc"]   = Module_Stdfunc();
+		modules["stdstring"] = Module_Stdstring();
 
 		Import("core", true);
 	}
@@ -258,12 +261,12 @@ class Environment {
 					string labelName = part[1 .. $];
 
 					foreach (entry ; code.entries) {
-						if (entry.value.value.length == 0) {
+						if (entry.value.value.strip().empty()) {
 							continue;
 						}
 						
-						if (entry.value.value[$ - 1] == ':') {
-							string thisLabel = entry.value.value[0 .. $ - 1];
+						if (entry.value.value.strip()[$ - 1] == ':') {
+							string thisLabel = entry.value.value.strip()[0 .. $ - 1];
 
 							if (thisLabel == labelName) {
 								ret ~= text(entry.value.key);
@@ -307,12 +310,26 @@ class Environment {
 		return true;
 	}
 
-	void Interpret(int line, string str) {
-		if (str.strip()[0] == '#') {
+	void ErrorHandler() {
+		if (ip is null) {
 			return;
 		}
-	
+		
+		stderr.writefln("Error from line %d", ip.value.key);
+		stderr.writeln("Backtrace");
+		foreach (i, ref call ; callStack) {
+			stderr.writefln(
+				"#%d: Line %d: %s", i, call, code[call]
+			);
+		}
+	}
+
+	void Interpret(int line, string str) {
 		increment = true;
+		
+		if (str.strip().empty() || (str.strip()[0] == '#')) {
+			return;
+		}
 	
 		// string[] parts = SubstituteParts(line, str.Split(line));
 		string[] parts = str.Split(line);
@@ -346,45 +363,30 @@ class Environment {
 			
 			auto func = functions[parts[0]];
 
-			try {
-				if (func.builtIn) {
-					if (
-						func.strictArgs &&
-						!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
-					) {
-						stderr.writefln(
-							"Error: Line %d: Invalid parameters for function %s", line,
-							parts[0]
-						);
-						throw new YSLError();
-					}
-					
-					auto ret = func.func(parts[1 .. $], this);
-
-					if (ret.length > 0) {
-						returnStack ~= ret;
-					}
-				}
-				else {
-					callStack ~= ip.value.key;
-
-					if (!Jump(func.label, false)) {
-						stderr.writefln("Error: Broken function %s", parts[0]);
-						throw new YSLError();
-					}
-				}
-			}
-			catch (YSLError) {
-				if (ip is null) {
-					return;
+			if (func.builtIn) {
+				if (
+					func.strictArgs &&
+					!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
+				) {
+					stderr.writefln(
+						"Error: Line %d: Invalid parameters for function %s", line,
+						parts[0]
+					);
+					throw new YSLError();
 				}
 				
-				stderr.writefln("Error from line %d", ip.value.key);
-				stderr.writeln("Backtrace");
-				foreach (i, ref call ; callStack) {
-					stderr.writefln(
-						"#%d: Line %d: %s", i, call, code[call]
-					);
+				auto ret = func.func(parts[1 .. $], this);
+
+				if (ret.length > 0) {
+					returnStack ~= ret;
+				}
+			}
+			else {
+				callStack ~= ip.value.key;
+
+				if (!Jump(func.label, false)) {
+					stderr.writefln("Error: Broken function %s", parts[0]);
+					throw new YSLError();
 				}
 			}
 		}

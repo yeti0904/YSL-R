@@ -10,13 +10,15 @@ const string appHelp = "
 Usage: %s [FILE] [FLAGS]
 
 Flags:
-	-h / --help : Shows this info
-	-e / --edit : Loads editor module
+	-h / --help   : Shows this info
+	-e / --edit   : Loads editor module
+	-c / --compat : Enables YSL1 compatibility mode
 ";
 
 int main(string[] args) {
 	string inFile;
 	bool   importEditor = false;
+	bool   compatMode   = false;
 
 	auto env = new Environment();
 
@@ -33,6 +35,11 @@ int main(string[] args) {
 					importEditor = true;
 					break;
 				}
+				case "-c":
+				case "--compat": {
+					compatMode = true;
+					break;
+				}
 				default: {
 					stderr.writefln("Unknown flag %s", args[i]);
 					return 1;
@@ -47,6 +54,12 @@ int main(string[] args) {
 	if (importEditor) {
 		env.Import("editor", true);
 		writeln("Imported editor");
+	}
+
+	if (compatMode) {
+		env.Import("stdio", true);
+		env.Import("editor", true);
+		env.Import("stdstring", true);
 	}
 
 	if (inFile.empty()) {
@@ -66,7 +79,9 @@ int main(string[] args) {
 			try {
 				env.Interpret(-1, code);
 			}
-			catch (YSLError) {}
+			catch (YSLError) {
+				env.ErrorHandler();
+			}
 			catch (Exception e) {
 				stderr.writefln("Exception from %s:%d: %s", e.file, e.line, e.msg);
 				stderr.writeln(e.info);
@@ -82,7 +97,13 @@ int main(string[] args) {
 			return 1;
 		}
 
-		env.Run();
+		try {
+			env.Run();
+		}
+		catch (YSLError) {
+			env.ErrorHandler();
+			return 1;
+		}
 	}
 
 	return 0;

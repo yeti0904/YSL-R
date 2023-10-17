@@ -25,7 +25,10 @@ static Variable Var(string[] args, Environment env) {
 
 	switch (args[1]) {
 		case "=": {
-			if (args[2].isNumeric()) {
+			if (args.length == 2) {
+				env.CreateVariable(var, []);
+			}
+			else if (args[2].isNumeric()) {
 				int[] array;
 				
 				for (int i = 2; i < args.length; ++ i) {
@@ -336,6 +339,20 @@ static Variable Cmp(string[] args, Environment env) {
 	return [args[0] == args[1]? 1 : 0];
 }
 
+static Variable Gt(string[] args, Environment env) {
+	auto a = parse!int(args[0]);
+	auto b = parse!int(args[1]);
+
+	return [a > b? 1 : 0];
+}
+
+static Variable Lt(string[] args, Environment env) {
+	auto a = parse!int(args[0]);
+	auto b = parse!int(args[1]);
+
+	return [a < b? 1 : 0];
+}
+
 static Variable Not(string[] args, Environment env) {
 	if (env.returnStack.length == 0) {
 		stderr.writeln("Error: goto_if: Return stack empty");
@@ -380,6 +397,24 @@ static Variable SetSize(string[] args, Environment env) {
 	return [];
 }
 
+static Variable Swap(string[] args, Environment env) {
+	if (!env.VariableExists(args[0])) {
+		stderr.writefln("Error: swap: Non existant variable: %s", args[0]);
+		throw new YSLError();
+	}
+	if (!env.VariableExists(args[1])) {
+		stderr.writefln("Error: swap: Non existant variable: %s", args[1]);
+		throw new YSLError();
+	}
+
+	auto arr1 = *env.GetVariable(args[0]);
+	auto arr2 = *env.GetVariable(args[1]);
+
+	env.CreateVariable(args[0], arr2);
+	env.CreateVariable(args[1], arr1);
+	return [];
+}
+
 Module Module_Core() {
 	Module ret;
 	ret["var"]      = Function.CreateBuiltIn(false, [], &Var);
@@ -390,9 +425,12 @@ Module Module_Core() {
 	ret["return"]   = Function.CreateBuiltIn(false, [], &Return);
 	ret["exit"]     = Function.CreateBuiltIn(false, [], &Exit);
 	ret["cmp"]      = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Cmp);
+	ret["gt"]       = Function.CreateBuiltIn(true, [ArgType.Numerical, ArgType.Numerical], &Gt);
+	ret["lt"]       = Function.CreateBuiltIn(true, [ArgType.Numerical, ArgType.Numerical], &Lt);
 	ret["not"]      = Function.CreateBuiltIn(false, [], &Not);
 	ret["size"]     = Function.CreateBuiltIn(true, [ArgType.Other], &Size);
 	ret["wait"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &Wait);
 	ret["set_size"] = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Numerical], &SetSize);
+	ret["swap"]     = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Swap);
 	return ret;
 }
