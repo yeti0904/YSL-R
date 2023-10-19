@@ -245,7 +245,7 @@ static Variable StringArray(string[] args, Environment env) {
 		case "new": {
 			string[] ret;
 
-			for (size_t i = 2; i < args.length; ++ i) {
+			for (size_t i = 1; i < args.length; ++ i) {
 				ret ~= args[i];
 			}
 
@@ -270,8 +270,9 @@ static Variable StringArray(string[] args, Environment env) {
 
 			auto var   = env.GetVariable(args[1]);
 			auto array = IntArrayToStringArray(*var);
+			auto index = parse!int(args[2]);
 
-			return StringToIntArray(array[0]);
+			return StringToIntArray(array[index]);
 		}
 		case "l":
 		case "length": {
@@ -327,8 +328,14 @@ static Variable StringArray(string[] args, Environment env) {
 
 			auto var   = env.GetVariable(args[1]);
 			auto array = IntArrayToStringArray(*var);
+			auto index = parse!int(args[2]);
+
+			if (index >= array.length) {
+				stderr.writefln("Error: string_array: index out of bounds");
+				throw new YSLError();
+			}
 			
-			array[parse!int(args[2])] = args[3];
+			array[index] = args[3];
 
 			*var = StringArrayToIntArray(array);
 			break;
