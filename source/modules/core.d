@@ -503,6 +503,11 @@ static Variable GotoIf(string[] args, Environment env) {
 }
 
 static Variable Gosub(string[] args, Environment env) {
+	if (!args[0].isNumeric()) {
+		stderr.writeln("Error: gosub: Invalid jump location");
+		throw new YSLError();
+	}
+
 	int line = parse!int(args[0]);
 
 	foreach (ref arg ; args[1 .. $]) {
@@ -730,7 +735,7 @@ static Variable Sqrt(string[] args, Environment env) {
 }
 
 static Variable Local(string[] args, Environment env) {
-	// TODO
+	env.locals[$ - 1][args[0]] = [];
 	return [];
 }
 
@@ -783,8 +788,8 @@ Module Module_Core() {
 	ret["matrix"]       = Function.CreateBuiltIn(false, [], &Matrix);
 	ret["goto"]         = Function.CreateBuiltIn(true, [ArgType.Numerical], &Goto);
 	ret["goto_if"]      = Function.CreateBuiltIn(true, [ArgType.Numerical], &GotoIf);
-	ret["gosub"]        = Function.CreateBuiltIn(true, [ArgType.Numerical], &Gosub);
-	ret["gosub_if"]     = Function.CreateBuiltIn(true, [ArgType.Numerical], &GosubIf);
+	ret["gosub"]        = Function.CreateBuiltIn(false, [], &Gosub);
+	ret["gosub_if"]     = Function.CreateBuiltIn(false, [], &GosubIf);
 	ret["return"]       = Function.CreateBuiltIn(false, [], &Return);
 	ret["exit"]         = Function.CreateBuiltIn(false, [], &Exit);
 	ret["cmp"]          = Function.CreateBuiltIn(true, [ArgType.Other, ArgType.Other], &Cmp);
@@ -802,7 +807,7 @@ Module Module_Core() {
 	ret["load_end"]     = Function.CreateBuiltIn(true, [ArgType.Other], &LoadEnd);
 	ret["error"]        = Function.CreateBuiltIn(false, [], &Error);
 	ret["sqrt"]         = Function.CreateBuiltIn(true, [ArgType.Numerical], &Sqrt);
-	ret["local"]        = Function.CreateBuiltIn(false, [], &Local);
+	ret["local"]        = Function.CreateBuiltIn(true, [ArgType.Other], &Local);
 	ret["string"]       = Function.CreateBuiltIn(true, [ArgType.Other], &String);
 	ret["l_shift"]      = Function.CreateBuiltIn(true, [ArgType.Numerical, ArgType.Numerical], &LShift);
 	ret["r_shift"]      = Function.CreateBuiltIn(true, [ArgType.Numerical, ArgType.Numerical], &RShift);

@@ -208,7 +208,14 @@ class Environment {
 	}
 
 	void CreateVariable(string name, int[] value) {
-		if (!GlobalExists(name) && (locals.length > 0)) {
+		/*if (!GlobalExists(name) && (locals.length > 0)) {
+			locals[$ - 1][name] = value;
+		}
+		else {
+			globals[name] = value;
+		}*/
+
+		if (LocalExists(name)) {
 			locals[$ - 1][name] = value;
 		}
 		else {
