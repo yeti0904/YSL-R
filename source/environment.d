@@ -100,6 +100,7 @@ class Environment {
 		import yslr.modules.doc;
 		import yslr.modules.ysl;
 		import yslr.modules.core;
+		import yslr.modules.file;
 		import yslr.modules.stdio;
 		import yslr.modules.editor;
 		import yslr.modules.stdfunc;
@@ -108,6 +109,7 @@ class Environment {
 		modules["doc"]       = Module_Doc();
 		modules["ysl"]       = Module_Ysl();
 		modules["core"]      = Module_Core();
+		modules["file"]      = Module_File();
 		modules["stdio"]     = Module_Stdio();
 		modules["editor"]    = Module_Editor();
 		modules["stdfunc"]   = Module_Stdfunc();
@@ -120,7 +122,11 @@ class Environment {
 		return (name in modules) !is null;
 	}
 
-	void Import(string name, bool global) {
+	void Import(string name, bool global, string as = "") {
+		if (as == "") {
+			as = name;
+		}
+	
 		foreach (key, value ; modules[name]) {
 			string funcName;
 
@@ -130,7 +136,7 @@ class Environment {
 				funcName = key;
 			}
 			else {
-				funcName = format("%s.%s", name, key);
+				funcName = format("%s.%s", as, key);
 			}
 
 			functions[funcName] = value;

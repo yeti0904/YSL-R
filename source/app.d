@@ -57,6 +57,7 @@ int main(string[] args) {
 	}
 
 	if (compatMode) {
+		env.Import("file", true);
 		env.Import("stdio", true);
 		env.Import("editor", true);
 		env.Import("stdstring", true);
