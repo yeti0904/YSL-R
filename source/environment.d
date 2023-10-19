@@ -264,25 +264,55 @@ class Environment {
 					break;
 				}
 				case '*': {
+					if (part.length == 1) {
+						ret ~= part;
+						break;
+					}
+				
 					string labelName = part[1 .. $];
 
-					foreach (entry ; code.entries) {
-						if (entry.value.value.strip().empty()) {
+					Label start = code.entries.head;
+
+					if (start is null) {
+						goto errorNoLabel;
+					}
+
+					if (labelName[0] == '.') {
+						auto it2 = start;
+
+						while (it2.previous !is null) {
+							it2 = it2.previous;
+
+							if (
+								(it2.value.value.length > 0) &&
+								(it2.value.value[$ - 1] == ':') &&
+								(it2.value.value[0] != '.')
+							) {
+								break;
+							}
+						}
+
+						start = it2;
+					}
+					
+					for (auto it = start; it !is null; it = it.next) {
+						if (it.value.value.strip().empty()) {
 							continue;
 						}
 						
-						if (entry.value.value.strip()[$ - 1] == ':') {
-							string thisLabel = entry.value.value.strip()[0 .. $ - 1];
+						if (it.value.value.strip()[$ - 1] == ':') {
+							string thisLabel = it.value.value.strip()[0 .. $ - 1];
 
 							if (thisLabel == labelName) {
-								ret ~= text(entry.value.key);
+								ret ~= text(it.value.key);
 								goto nextPart;
 							}
 						}
 					}
 
+					errorNoLabel:
 					stderr.writefln(
-						"Error: line %d: Couldn't find label %s", line, labelName
+						"Error: line %d: Couldn't find label '%s'", line, labelName
 					);
 					throw new YSLError();
 				}

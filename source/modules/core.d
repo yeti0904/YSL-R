@@ -516,12 +516,16 @@ static Variable Gosub(string[] args, Environment env) {
 
 	foreach (entry ; env.code.entries) {
 		if (entry.value.key == line) {
+			Scope newScope;
+			
 			env.callStack ~= env.ip.value.key;
 			env.ip         = entry;
 			env.increment  = false;
+			env.locals    ~= newScope;
 			return [];
 		}
 	}
+
 
 	stderr.writefln("Error: gosub: Couldn't find line %d", line);
 	throw new YSLError();
@@ -559,6 +563,12 @@ static Variable Return(string[] args, Environment env) {
 		stderr.writeln("Fatal error: return: Failed to return");
 		throw new YSLError();
 	}
+
+	if (env.locals.length == 0) {
+		stderr.writeln("Fatal error: No scopes to end at return");
+		throw new YSLError();
+	}
+	env.locals = env.locals.remove(env.locals.length - 1);
 
 	return [];
 }
