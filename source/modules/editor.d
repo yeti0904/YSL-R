@@ -40,11 +40,27 @@ static Variable Save(string[] args, Environment env) {
 	return [];
 }
 
+static Variable Renum(string[] args, Environment env) {
+	string[] lines;
+
+	foreach (key, ref value ; env.code) {
+		lines ~= value;
+	}
+
+	env.code = new SortedMap!(int, string);
+
+	foreach (i, ref line ; lines) {
+		env.code[cast(int) ((i + 1) * 10)] = line;
+	}
+	return [];
+}
+
 Module Module_Editor() {
 	Module ret;
 	ret["list"]  = Function.CreateBuiltIn(false, [], &List);
 	ret["clear"] = Function.CreateBuiltIn(false, [], &Clear);
 	ret["load"]  = Function.CreateBuiltIn(true, [ArgType.Other], &Load);
 	ret["save"]  = Function.CreateBuiltIn(true, [ArgType.Other], &Save);
+	ret["renum"] = Function.CreateBuiltIn(true, [], &Renum);
 	return ret;
 }
