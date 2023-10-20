@@ -406,18 +406,18 @@ class Environment {
 			
 			auto func = functions[parts[0]];
 
+			if (
+				func.strictArgs &&
+				!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
+			) {
+				stderr.writefln(
+					"Error: Line %d: Invalid parameters for function %s", line,
+					parts[0]
+				);
+				throw new YSLError();
+			}
+			
 			if (func.builtIn) {
-				if (
-					func.strictArgs &&
-					!ArgumentsCorrect(func.requiredArgs, parts[1 .. $])
-				) {
-					stderr.writefln(
-						"Error: Line %d: Invalid parameters for function %s", line,
-						parts[0]
-					);
-					throw new YSLError();
-				}
-				
 				auto ret = func.func(parts[1 .. $], this);
 
 				if (ret.length > 0) {
@@ -425,7 +425,15 @@ class Environment {
 				}
 			}
 			else {
+				Scope newScope;
 				callStack ~= ip.value.key;
+				locals    ~= newScope;
+
+				string[] args = parts[1 .. $];
+
+				foreach (ref arg ; args) {
+					passStack ~= StringToIntArray(arg);
+				}
 
 				if (!Jump(func.label, false)) {
 					stderr.writefln("Error: Broken function %s", parts[0]);

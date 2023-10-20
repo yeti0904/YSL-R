@@ -1,0 +1,20 @@
+# quines are easy peasy in YSL-R
+
+import_std
+import ysl
+
+ysl.get_lines
+var lines copy return
+size lines
+var lineAmount from return
+
+var i = 0
+loop:
+	var lineNum from lines $i
+	ysl.get_line $lineNum
+	var line copy return
+	println !line
+	
+	var i += 1
+	lt $i $lineAmount
+	goto_if *loop

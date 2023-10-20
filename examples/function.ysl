@@ -1,7 +1,22 @@
 import_std
 goto *main
-sayHi:
-	println "hi!"
-	return
+
+add:
+	local a
+	local b
+	var a pass
+	var b pass
+	var a = !a
+	var b = !b
+	var a += $b
+	return $a
+	
 main:
-	gosub *sayHi
+	new_func add *add
+	set_args add num num
+	add 5 5
+	var res c return
+	println $res
+
+	# should crash
+	add a 5
