@@ -555,7 +555,13 @@ static Variable Return(string[] args, Environment env) {
 			env.returnStack ~= [parse!int(arg)];
 		}
 		else {
-			env.returnStack ~= StringToIntArray(arg);
+			// env.returnStack ~= StringToIntArray(arg);
+			if (!env.VariableExists(arg)) {
+				stderr.writefln("Error: return: No such variable '%s'", arg);
+				throw new YSLError();
+			}
+
+			env.returnStack ~= *env.GetVariable(arg);
 		}
 	}
 

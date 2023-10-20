@@ -9,7 +9,7 @@ add:
 	var a = !a
 	var b = !b
 	var a += $b
-	return $a
+	return a
 	
 main:
 	new_func add *add
